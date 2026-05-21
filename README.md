@@ -217,7 +217,3 @@ Make sure:
 - `npm run dev` is running in `backend/`
 - `frontend/vite.config.js` still proxies `/api` to `http://localhost:5000`
 
-## Notes
-
-- The repository currently ignores `.env`, `node_modules`, and `.venv`.
-- The frontend local setup does not require `VITE_API_BASE_URL` unless you want a custom API URL.
