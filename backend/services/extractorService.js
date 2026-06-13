@@ -15,8 +15,8 @@ const extractContent = async (url) => {
   $("p").each((_, el) => {
     content += $(el).text() + "\n";
   });
-    //console.log(title);
-    //console.log(content);
+  console.log(title);
+  console.log(content);
   return {
     title,
     content,

@@ -1,58 +1,69 @@
-const { chromium } = require("playwright");
+const dotenv = require("dotenv");
+const { tavily } = require("@tavily/core");
 
-const BLOCKED = [
-  "/tag/",
-  "/category/",
-  "/author/",
-  "/page/",
-  "#",
-  "?",
-  "mailto:",
-  "tel:",
-];
+dotenv.config();
 
-const crawlBlogPages = async (blogUrl) => {
-  const urlObj = new URL(blogUrl);
+const client = tavily({
+  apiKey: process.env.SEARCH_API_KEY
+});
 
-  const base = urlObj.origin;
-  const allowedPath = urlObj.pathname;
+function tokenizeSlug(value) {
+  return String(value || "")
+    .split(/[^a-zA-Z0-9]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
 
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+function getSiteTarget(rawUrl) {
+  const parsedUrl = new URL(rawUrl);
+  const cleanedPath = parsedUrl.pathname.replace(/\/$/, "");
 
-  await page.goto(blogUrl, { waitUntil: "domcontentloaded" });
+  return `${parsedUrl.host}${cleanedPath}`;
+}
 
-  const links = await page.$$eval("a", (elements) =>
-    elements.map((el) => el.href)
-  );
+function getFallbackKeyword(rawUrl) {
+  const parsedUrl = new URL(rawUrl);
+  const pathTokens = tokenizeSlug(parsedUrl.pathname);
 
-  await browser.close();
+  if (pathTokens.length > 0) {
+    return pathTokens.join(" ");
+  }
 
-  const uniqueLinks = [...new Set(links)].filter((link) => {
-    if (!link.startsWith("http")) return false;
+  const hostWithoutWww = parsedUrl.hostname.replace(/^www\./i, "");
+  const hostParts = hostWithoutWww.split(".");
+  const domainToken = hostParts.length > 1 ? hostParts[hostParts.length - 2] : hostParts[0];
+  const domainKeywords = tokenizeSlug(domainToken);
 
-    const parsed = new URL(link);
+  if (domainKeywords.length > 0) {
+    return domainKeywords.join(" ");
+  }
 
-    // same domain only
-    if (parsed.origin !== base) return false;
+  return "website";
+}
 
-    // only current path and below
-    if (!parsed.pathname.startsWith(allowedPath)) return false;
+function buildSiteQuery(rawUrl, keyword = "") {
+  const siteTarget = getSiteTarget(rawUrl);
+  const cleanedKeyword = String(keyword || "").trim() || getFallbackKeyword(rawUrl);
 
-    if (BLOCKED.some((pattern) => link.includes(pattern))) return false;
+  return `site:${siteTarget} ${cleanedKeyword}`;
+}
 
-    return true;
+async function crawlBlogPages(input, options = {}) {
+  const { isSearchQuery = false, keyword = "", maxResults = 10, searchDepth = "advanced" } = options;
+  const searchQuery = isSearchQuery ? String(input || "").trim() : buildSiteQuery(input, keyword);
+
+  if (!searchQuery) {
+    return [];
+  }
+
+  const response = await client.search(searchQuery, {
+    searchDepth,
+    maxResults
   });
 
-//   console.log(`\nFound ${uniqueLinks.length} links on ${blogUrl}:`);
+  return [...new Set((response.results || []).map((result) => result.url).filter(Boolean))];
+}
 
-//   uniqueLinks.forEach((link, i) => {
-//     console.log(`${i + 1}. ${link}`);
-//   });
-
-  return uniqueLinks;
-};
-
-//crawlBlogPages("https://www.geeksforgeeks.org/courses/");
+crawlBlogPages.buildSiteQuery = buildSiteQuery;
 
 module.exports = crawlBlogPages;
