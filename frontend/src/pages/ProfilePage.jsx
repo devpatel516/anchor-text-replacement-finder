@@ -61,20 +61,20 @@ function ProfilePage() {
         <div className="user-info-list">
           <article className="meta-item">
             <span>Name</span>
-            <p>{user.name}</p>
+            <p>{user?.name}</p>
           </article>
           <article className="meta-item">
             <span>Email</span>
-            <p>{user.email}</p>
+            <p>{user?.email}</p>
           </article>
           <article className="meta-item">
             <span>Current Plan</span>
-            <p>{user.plan === "pro" ? "Pro" : "Free"}</p>
+            <p>{user?.plan === "pro" ? "Pro" : "Free"}</p>
           </article>
           <article className="meta-item">
             <span>Available Analyses</span>
             <p>
-              {user.analysesRemaining} / {user.analysisLimit}
+              {user?.analysesRemaining} / {user?.analysisLimit}
             </p>
           </article>
         </div>
@@ -108,7 +108,7 @@ function ProfilePage() {
                 <p className="history-url">{scan.url}</p>
                 <div className="history-meta">
                   <span>Anchor: {scan.anchorText}</span>
-                  <span>Pages Crawled: {scan.crawledPages.length}</span>
+                  <span>Pages Crawled: {scan.crawledPages?.length || 0}</span>
                 </div>
 
                 <div className="history-output-grid">
@@ -144,11 +144,6 @@ function ProfilePage() {
                     </a>
                   ) : null}
                 </div>
-
-                <details className="json-block history-json-block">
-                  <summary>View full output</summary>
-                  <pre>{JSON.stringify(scan.output, null, 2)}</pre>
-                </details>
               </article>
             ))}
           </div>
